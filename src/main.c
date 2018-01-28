@@ -46,6 +46,8 @@
 #include "gpio.h"
 #include "dma.h"
 #include "u8g_com_arm_stm32.h"
+#include "nrf24l01.h"
+
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
@@ -55,10 +57,17 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 uint32_t newAdcValues;
+nrf24l01_dev myNRF;
+uint8_t nrfRxBuffer[32];
+uint8_t nrfTxBuffer[32];
+uint8_t nrfRxAddress[5];
+uint8_t nrfTxAddress[5];
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void Nrf_Config(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -111,6 +120,7 @@ int main(void)
   memset(adcValue,0,sizeof(adcValue));
   newAdcValues=0;
   HAL_ADC_Start_DMA(&hadc1,(uint32_t*)adcValue,10);
+  Nrf_Config();
 //  HAL_ADC_Start_DMA(&hadc1,adcValue,10);
   /* USER CODE END 2 */
 
@@ -185,6 +195,36 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 	newAdcValues++;
 }
 
+void Nrf_Config(void)
+{
+	myNRF.DATA_RATE=NRF_DATA_RATE_250KBPS;
+	myNRF.TX_POWER=NRF_TX_PWR_M18dBm;
+	myNRF.CRC_WIDTH=NRF_CRC_WIDTH_1B;
+	myNRF.ADDR_WIDTH=NRF_ADDR_WIDTH_5;
+	myNRF.STATE=NRF_STATE_TX;
+	myNRF.PayloadLength=32;
+	myNRF.RetransmitCount=0;
+	myNRF.RetransmitDelay=0;
+	myNRF.BUSY_FLAG=0;
+	myNRF.RX_BUFFER=nrfRxBuffer;
+	myNRF.TX_BUFFER=nrfTxBuffer;
+	myNRF.RF_CHANNEL=0;
+	myNRF.RX_ADDRESS=nrfRxAddress;
+	myNRF.TX_ADDRESS=nrfTxAddress;
+
+	myNRF.spi=&hspi2;
+	myNRF.NRF_CSN_GPIO_PIN=GPIO_PIN_12;
+	myNRF.NRF_CSN_GPIOx=GPIOB;
+	myNRF.NRF_CE_GPIO_PIN=SPI_CE_Pin;
+	myNRF.NRF_CE_GPIOx=SPI_CE_GPIO_Port;
+	myNRF.NRF_IRQ_GPIO_PIN=SPI_IRQ_Pin;
+	myNRF.NRF_IRQ_GPIOx=SPI_IRQ_GPIO_Port;
+	myNRF.NRF_IRQn=EXTI0_IRQn;
+	myNRF.NRF_IRQ_preempt_priority=3;
+	myNRF.NRF_IRQ_sub_priority=0;
+
+	NRF_Init(&myNRF);
+}
 /** System Clock Configuration
 */
 void SystemClock_Config(void)
